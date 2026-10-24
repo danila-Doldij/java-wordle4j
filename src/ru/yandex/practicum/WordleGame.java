@@ -4,12 +4,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-class WordNotFoundInDictionaryException extends Exception {
-    public WordNotFoundInDictionaryException(String message) {
-        super(message);
-    }
-}
-
 public class WordleGame {
     private String answer;
     private int attemptsLeft;
