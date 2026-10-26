@@ -3,18 +3,21 @@ package ru.yandex.practicum;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class WordleGame {
     private String answer;
     private int attemptsLeft;
     private final WordleDictionary dictionary;
     private final List<String> history;
+    private final List<String> resultsHistory;
     private final PrintWriter logger;
 
     public WordleGame(WordleDictionary dictionary, PrintWriter logger) {
         this.dictionary = dictionary;
-        this.logger = logger; // Сохраняем переданный логгер
+        this.logger = logger;
         this.history = new ArrayList<>();
+        this.resultsHistory = new ArrayList<>();
         this.attemptsLeft = 6;
         this.answer = dictionary.getRandomWord();
     }
@@ -42,13 +45,25 @@ public class WordleGame {
             throw new WordNotFoundInDictionaryException("Вы уже пробовали это слово!");
         }
 
+        String result = calculateResult(normalizedGuess);
+
         history.add(normalizedGuess);
+        resultsHistory.add(result);
         attemptsLeft--;
 
         if (normalizedGuess.equals(answer)) {
             return "+++++";
         }
 
+        if (this.logger != null) {
+            this.logger.println("Ход игрока: " + normalizedGuess + " -> Результат: " + result);
+            this.logger.flush();
+        }
+
+        return result;
+    }
+
+    private String calculateResult(String normalizedGuess) {
         char[] result = new char[5];
         boolean[] usedInAnswer = new boolean[5];
         boolean[] usedInGuess = new boolean[5];
@@ -80,11 +95,6 @@ public class WordleGame {
             }
         }
 
-            if (this.logger != null) {
-                this.logger.println("Ход игрока: " + normalizedGuess + " -> Результат: " + new String(result));
-                this.logger.flush();
-            }
-
         return new String(result);
     }
 
@@ -93,11 +103,70 @@ public class WordleGame {
         if (allWords.isEmpty()) {
             return null;
         }
-        int randomIndex = new java.util.Random().nextInt(allWords.size());
-        return allWords.get(randomIndex);
+
+        List<String> candidates = new ArrayList<>();
+
+        for (String word : allWords) {
+            boolean isValid = true;
+
+            for (int i = 0; i < history.size(); i++) {
+                String guess = history.get(i);
+                String result = resultsHistory.get(i);
+
+                if (word.equals(guess)) {
+                    isValid = false;
+                    break;
+                }
+
+                for (int j = 0; j < 5; j++) {
+                    char guessChar = guess.charAt(j);
+                    char resultChar = result.charAt(j);
+
+                    if (resultChar == '+') {
+                        if (word.charAt(j) != guessChar) {
+                            isValid = false;
+                            break;
+                        }
+                    } else if (resultChar == '^') {
+                        if (word.charAt(j) == guessChar) {
+                            isValid = false;
+                            break;
+                        }
+
+                        boolean hasLetterElsewhere = false;
+                        for (int k = 0; k < 5; k++) {
+                            if (k != j && word.charAt(k) == guessChar) {
+                                hasLetterElsewhere = true;
+                                break;
+                            }
+                        }
+                        if (!hasLetterElsewhere) {
+                            isValid = false;
+                            break;
+                        }
+                    } else if (resultChar == '-') {
+                        if (word.charAt(j) == guessChar) {
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+                if (!isValid) break;
+            }
+
+            if (isValid) {
+                candidates.add(word);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        int randomIndex = new Random().nextInt(candidates.size());
+        return candidates.get(randomIndex);
     }
 
-    // Метод только для тестов.
     void setAnswerForTest(String answer) {
         this.answer = answer;
     }
